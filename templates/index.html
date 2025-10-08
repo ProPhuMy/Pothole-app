@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Pothole Detection & Navigation</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Leaflet MarkerCluster CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <div class="app">
+    <div class="sidebar" id="sidebar">
+      <h2>Upload Image</h2>
+      <p>Select an image (png/jpg/gif/webp, max 16 MB)</p>
+      <input type="file" id="fileInput" accept="image/*" />
+      
+      <h3 style="font-size: 1rem; margin-top: 16px; margin-bottom: 8px;">Location</h3>
+      <button id="locationBtn" class="location-btn">📍 Use My Location</button>
+      <p style="margin: 8px 0; font-size: 0.85rem; color: #888;">or enter manually:</p>
+      <input type="text" id="addressInput" placeholder="Enter address or coordinates" 
+             style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;" />
+      
+      <div id="locationInfo" style="font-size: 0.85rem; color: #555; margin-bottom: 10px; display: none;">
+        📍 <span id="locationText">No location set</span>
+      </div>
+      
+      <button id="uploadBtn">Upload & Detect</button>
+      <div class="result" id="result"></div>
+      <img id="preview" class="preview" alt="preview" />
+      
+      <hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;">
+      
+      <h3 style="font-size: 1rem; margin-bottom: 8px;">Quick Report</h3>
+      <p style="margin: 4px 0 10px 0; font-size: 0.85rem; color: #888;">Report pothole at your location</p>
+      <button id="reportPotholeBtn" style="background: #ff6b6b;">🕳️ Report Pothole Here</button>
+      <div id="reportResult" style="font-size: 0.85rem; margin-top: 8px;"></div>
+      
+      <hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;">
+      
+      <h3 style="font-size: 1rem; margin-bottom: 8px;">Route Finder</h3>
+      <p style="margin: 4px 0; font-size: 0.85rem; color: #888;">Find safest path avoiding potholes</p>
+      
+      <button id="mapClickBtn" style="background: #17a2b8; margin-bottom: 10px;">
+        📍 Click Map to Set Points
+      </button>
+      <div id="mapClickStatus" style="font-size: 0.85rem; color: #666; margin-bottom: 8px; display: none;">
+        <span id="clickStatusText">Click on map to set origin</span>
+      </div>
+      
+      <input type="text" id="originInput" placeholder="Origin (address or lat,lon)" 
+             style="width: 100%; padding: 8px; margin-bottom: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 0.9rem;" />
+      
+      <input type="text" id="destinationInput" placeholder="Destination (address or lat,lon)" 
+             style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 0.9rem;" />
+      
+      <button id="findRouteBtn" style="background: #5bc0de;">🗺️ Find Route</button>
+      <button id="clearRouteBtn" style="background: #6c757d; display: none;">Clear Route</button>
+      
+      <div id="routeResult" style="font-size: 0.85rem; margin-top: 10px;"></div>
+      
+      <hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;">
+      
+      <h3 style="font-size: 1rem; margin-bottom: 8px;">Map Statistics</h3>
+      <div id="stats" style="font-size: 0.85rem; color: #555;">
+        <div>📍 Total Reports: <strong id="totalReports">0</strong></div>
+        <div>⚠️ Potholes Found: <strong id="potholeCount">0</strong></div>
+        <div>✅ Clean Roads: <strong id="cleanCount">0</strong></div>
+      </div>
+      
+      <div style="margin-top: 12px;">
+        <label style="font-size: 0.85rem; display: flex; align-items: center; cursor: pointer;">
+          <input type="checkbox" id="toggleHeatmap" style="margin-right: 6px;">
+          Show Heat Map
+        </label>
+        <label style="font-size: 0.85rem; display: flex; align-items: center; cursor: pointer; margin-top: 6px;">
+          <input type="checkbox" id="toggleClustering" checked style="margin-right: 6px;">
+          Cluster Markers
+        </label>
+      </div>
+      
+      <hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;">
+      
+      <h3 style="font-size: 1rem; margin-bottom: 8px;">Storage Management</h3>
+      <div id="storageInfo" style="font-size: 0.85rem; color: #555; margin-bottom: 10px;">
+        <div>💾 Total Images: <strong id="totalFiles">-</strong></div>
+        <div>📦 Storage Used: <strong id="totalSize">-</strong> MB</div>
+      </div>
+      <button id="refreshStorageBtn" style="background: #17a2b8; font-size: 0.85rem; padding: 6px;">
+        🔄 Refresh Info
+      </button>
+      <button id="cleanupBtn" style="background: #ffc107; font-size: 0.85rem; padding: 6px;">
+        🧹 Cleanup Old Images
+      </button>
+      <div id="cleanupResult" style="font-size: 0.85rem; margin-top: 8px;"></div>
+    </div>
+
+    <div id="map"></div>
+  </div>
+
+  <div class="toggle-btn" id="toggleBtn">☰ Upload</div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Leaflet MarkerCluster JS -->
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <!-- Leaflet HeatMap JS -->
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
+  <!-- Custom JavaScript -->
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
